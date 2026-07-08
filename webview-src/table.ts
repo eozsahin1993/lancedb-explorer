@@ -146,7 +146,13 @@ let currentColumnsList: ColumnInfo[] = [];
 function handleSortChange(): void {
   forceFullRender = true;
   if (table && currentColumnsList.length > 0) {
+    // setColumns rebuilds the whole table (to refresh the sort-arrow icons on
+    // every header) and resets scroll as a side effect, before the server
+    // round-trip that will eventually redraw the rows even runs. Preserve
+    // horizontal scroll across it the same way the data reload does.
+    const scrollLeft = getScrollLeft();
     table.setColumns(buildColumns(currentColumnsList));
+    setScrollLeft(scrollLeft);
   }
 }
 
@@ -212,6 +218,17 @@ let suppressNextStatusClear = false;
 let lastRenderedOffset: number | undefined;
 let forceFullRender = false;
 
+function getScrollLeft(): number {
+  return table?.element.querySelector<HTMLElement>(".tabulator-tableholder")?.scrollLeft ?? 0;
+}
+
+function setScrollLeft(value: number): void {
+  const holder = table?.element.querySelector<HTMLElement>(".tabulator-tableholder");
+  if (holder) {
+    holder.scrollLeft = value;
+  }
+}
+
 function render(page: PageMessage): void {
   const columnKey = page.columns.map((c) => `${c.name}:${c.type}`).join("|");
   const sameOffset = lastRenderedOffset === page.offset && !forceFullRender;
@@ -237,11 +254,14 @@ function render(page: PageMessage): void {
     }
     // Same page reloading after an edit/clear: replaceData keeps scroll position
     // and avoids the full row teardown/rebuild setData does. A sort/filter change
-    // always forces a full reset even if it lands back on the same offset.
+    // always forces a full reset even if it lands back on the same offset. setData
+    // resets scroll entirely, which is right for vertical (row order changed) but
+    // not horizontal (columns didn't move) -- restore scrollLeft after it settles.
     if (sameOffset) {
       table.replaceData(page.rows);
     } else {
-      table.setData(page.rows);
+      const scrollLeft = getScrollLeft();
+      table.setData(page.rows).then(() => setScrollLeft(scrollLeft));
     }
   }
 
