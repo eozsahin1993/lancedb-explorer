@@ -1,0 +1,179 @@
+@import "tabulator-tables/dist/css/tabulator.css";
+
+.tabulator {
+  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+  font-size: 13px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.tabulator .tabulator-header {
+  border-bottom: 2px solid var(--vscode-focusBorder);
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+}
+
+.tabulator .tabulator-header .tabulator-col {
+  border-right: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+.tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 6px 10px;
+}
+
+.tabulator .tabulator-header .tabulator-col-resize-handle {
+  background: transparent;
+}
+
+.tabulator .tabulator-header .tabulator-col-resize-handle:hover {
+  background: var(--vscode-focusBorder);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tabulator .tabulator-header .tabulator-col.tabulator-sortable.tabulator-col-sorter-element:hover {
+    background-color: var(--vscode-list-hoverBackground);
+  }
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort="ascending"] .tabulator-col-content .tabulator-col-sorter,
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort="descending"] .tabulator-col-content .tabulator-col-sorter {
+  color: var(--vscode-focusBorder);
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort="ascending"] .tabulator-col-content .tabulator-col-sorter .tabulator-arrow {
+  border-bottom-color: var(--vscode-focusBorder);
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort="descending"] .tabulator-col-content .tabulator-col-sorter .tabulator-arrow {
+  border-top-color: var(--vscode-focusBorder);
+}
+
+.tabulator .tabulator-tableholder .tabulator-table {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-foreground);
+}
+
+.tabulator .tabulator-tableholder .tabulator-placeholder .tabulator-placeholder-contents {
+  color: var(--vscode-descriptionForeground);
+}
+
+.tabulator-row {
+  background-color: var(--vscode-editor-background);
+}
+
+.tabulator-row.tabulator-row-even {
+  background-color: color-mix(in srgb, var(--vscode-list-hoverBackground) 45%, var(--vscode-editor-background));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tabulator-row.tabulator-selectable:hover {
+    background-color: var(--vscode-list-hoverBackground);
+  }
+}
+
+.tabulator-row .tabulator-cell {
+  border-right: 1px solid var(--vscode-panel-border);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding: 6px 10px;
+}
+
+.tabulator-row .tabulator-cell .cell-content {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tabulator-row .tabulator-cell .cell-text,
+.tabulator-row .tabulator-cell .cell-null {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabulator-row .tabulator-cell .cell-null {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.tabulator-row .tabulator-cell .cell-copy-btn {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tabulator-row .tabulator-cell:hover .cell-copy-btn {
+  opacity: 1;
+}
+
+.tabulator-row .tabulator-cell .cell-copy-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+.tabulator-row .tabulator-cell .cell-copy-btn.cell-copy-btn-done {
+  color: var(--vscode-charts-green, var(--vscode-focusBorder));
+  opacity: 1;
+}
+
+.tabulator-row .tabulator-cell[tabulator-field="__rowNumber"] {
+  color: var(--vscode-descriptionForeground);
+}
+
+.tabulator-row .tabulator-cell.tabulator-frozen.tabulator-frozen-left {
+  border-right: 1px solid var(--vscode-panel-border);
+}
+
+.tabulator-popup-container {
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tabulator-tooltip {
+  color: inherit;
+}
+
+.tabulator .tabulator-footer {
+  border-top: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+}
+
+.tabulator .tabulator-tableholder {
+  scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 7px;
+}
+
+.tabulator .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}

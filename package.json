@@ -1,0 +1,104 @@
+{
+  "name": "lancedb-explorer",
+  "displayName": "LanceDB Explorer",
+  "description": "Browse LanceDB databases and tables from within VS Code",
+  "version": "0.0.1",
+  "publisher": "local",
+  "private": true,
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lancedbExplorer",
+          "title": "LanceDB",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "lancedbExplorer": [
+        {
+          "id": "lancedbExplorer.databases",
+          "name": "Databases"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "lancedbExplorer.databases",
+        "contents": "No LanceDB databases open yet.\n[Open Database](command:lancedbExplorer.openDatabase)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "lancedbExplorer.openDatabase",
+        "title": "LanceDB: Open Database...",
+        "icon": "$(database)"
+      },
+      {
+        "command": "lancedbExplorer.refresh",
+        "title": "LanceDB: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lancedbExplorer.closeDatabase",
+        "title": "LanceDB: Close Database"
+      },
+      {
+        "command": "lancedbExplorer.openTable",
+        "title": "LanceDB: Open Table"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "lancedbExplorer.openDatabase",
+          "when": "view == lancedbExplorer.databases",
+          "group": "navigation"
+        },
+        {
+          "command": "lancedbExplorer.refresh",
+          "when": "view == lancedbExplorer.databases",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lancedbExplorer.closeDatabase",
+          "when": "view == lancedbExplorer.databases && viewItem == database",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "typecheck": "tsc --noEmit -p ./ && tsc --noEmit -p tsconfig.webview.json",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/tabulator-tables": "^6.3.5",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@lancedb/lancedb": "^0.31.0",
+    "apache-arrow": "^17.0.0",
+    "tabulator-tables": "^6.5.2"
+  }
+}
