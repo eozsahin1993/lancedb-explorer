@@ -27,6 +27,7 @@ async function main() {
     platform: "browser",
     outdir: "dist/webview",
     entryNames: "table",
+    loader: { ".svg": "text" },
     logLevel: "info",
   });
 

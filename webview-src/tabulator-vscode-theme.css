@@ -100,11 +100,21 @@
   font-style: italic;
 }
 
-.tabulator-row .tabulator-cell .cell-copy-btn {
+.tabulator-row .tabulator-cell .cell-actions {
   position: absolute;
   right: 2px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+
+.tabulator-row .tabulator-cell:hover .cell-actions {
+  opacity: 1;
+}
+
+.tabulator-row .tabulator-cell .cell-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -115,22 +125,108 @@
   border-radius: 3px;
   background: var(--vscode-editor-background);
   color: var(--vscode-descriptionForeground);
-  opacity: 0;
   cursor: pointer;
 }
 
-.tabulator-row .tabulator-cell:hover .cell-copy-btn {
-  opacity: 1;
-}
-
-.tabulator-row .tabulator-cell .cell-copy-btn:hover {
+.tabulator-row .tabulator-cell .cell-icon-btn:hover {
   background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
   color: var(--vscode-foreground);
 }
 
-.tabulator-row .tabulator-cell .cell-copy-btn.cell-copy-btn-done {
+.tabulator-row .tabulator-cell .cell-icon-btn.cell-icon-btn-done {
   color: var(--vscode-charts-green, var(--vscode-focusBorder));
-  opacity: 1;
+}
+
+.edit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.edit-modal-overlay.hidden {
+  display: none;
+}
+
+.edit-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  padding: 12px;
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.edit-modal-header {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.edit-modal-textarea {
+  flex: 1;
+  min-height: 120px;
+  resize: vertical;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 13px;
+}
+
+.edit-modal-textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.edit-modal-error {
+  min-height: 16px;
+  color: var(--vscode-errorForeground, #f14c4c);
+  font-size: 12px;
+}
+
+.edit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-modal-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.edit-modal-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
+.edit-modal-btn-primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.edit-modal-btn-primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.edit-modal-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .tabulator-row .tabulator-cell[tabulator-field="__rowNumber"] {
@@ -160,6 +256,9 @@
 
 .tabulator .tabulator-tableholder {
   scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+  /* Leave room below the last row so its hover actions aren't covered by the
+     horizontal scrollbar. */
+  padding-bottom: 14px;
 }
 
 .tabulator .tabulator-tableholder::-webkit-scrollbar {

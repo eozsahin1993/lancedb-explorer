@@ -1,14 +1,13 @@
 import { TabulatorFull as Tabulator } from "tabulator-tables";
 import type { CellComponent, ColumnDefinition } from "tabulator-tables";
-import type { ColumnInfo, TablePage } from "../src/services/lancedbService";
+import type { CellValue, ColumnInfo } from "../src/services/lancedbService";
+import { onMessage, postNext, postPrev, postReady, postRefresh, postUpdate, type PageMessage } from "./vscodeApi";
+import { closeEditModal, isEditModalOpen, openEditModal, setEditModalError, setEditModalSaving } from "./editModal";
+import COPY_ICON_SVG from "../media/icons/copy.svg";
+import CHECK_ICON_SVG from "../media/icons/check.svg";
+import EDIT_ICON_SVG from "../media/icons/edit.svg";
+import CLEAR_ICON_SVG from "../media/icons/clear.svg";
 import "./tabulator-vscode-theme.css";
-
-declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
-
-type PageMessage = TablePage & { type: "page" };
-type ErrorMessage = { type: "error"; message: string };
-
-const vscode = acquireVsCodeApi();
 
 const prevBtn = document.getElementById("prev") as HTMLButtonElement;
 const nextBtn = document.getElementById("next") as HTMLButtonElement;
@@ -16,36 +15,64 @@ const refreshBtn = document.getElementById("refresh") as HTMLButtonElement;
 const rangeEl = document.getElementById("range") as HTMLElement;
 const statusEl = document.getElementById("status") as HTMLElement;
 
-prevBtn.addEventListener("click", () => vscode.postMessage({ type: "prev" }));
-nextBtn.addEventListener("click", () => vscode.postMessage({ type: "next" }));
-refreshBtn.addEventListener("click", () => vscode.postMessage({ type: "refresh" }));
-
-const COPY_ICON_SVG =
-  '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">' +
-  '<path d="M4 1.5A1.5 1.5 0 0 1 5.5 0h6A1.5 1.5 0 0 1 13 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 4 10.5v-9zM5.5 1a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-6z"/>' +
-  '<path d="M2 4.5V13.5A1.5 1.5 0 0 0 3.5 15h6a1.5 1.5 0 0 0 1.5-1.5v-.5h-1v.5a.5.5 0 0 1-.5.5h-6a.5.5 0 0 1-.5-.5V4.5A.5.5 0 0 1 3.5 4H4V3h-.5A1.5 1.5 0 0 0 2 4.5z"/>' +
-  "</svg>";
-
-const CHECK_ICON_SVG =
-  '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">' +
-  '<path d="M13.5 3.5 6 11 2.5 7.5l1-1L6 9l6.5-6.5z"/>' +
-  "</svg>";
+prevBtn.addEventListener("click", postPrev);
+nextBtn.addEventListener("click", postNext);
+refreshBtn.addEventListener("click", postRefresh);
 
 function copyToClipboard(text: string, button: HTMLButtonElement): void {
   navigator.clipboard.writeText(text).then(() => {
     button.innerHTML = CHECK_ICON_SVG;
-    button.classList.add("cell-copy-btn-done");
+    button.classList.add("cell-icon-btn-done");
     setTimeout(() => {
       button.innerHTML = COPY_ICON_SVG;
-      button.classList.remove("cell-copy-btn-done");
+      button.classList.remove("cell-icon-btn-done");
     }, 1000);
   });
+}
+
+function makeIconButton(svg: string, title: string): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "cell-icon-btn";
+  btn.title = title;
+  btn.innerHTML = svg;
+  return btn;
+}
+
+function rowIdOf(cell: CellComponent): string {
+  const rowData = cell.getRow().getData() as Record<string, unknown>;
+  return rowData.__rowid as string;
+}
+
+function handleEditClick(cell: CellComponent, col: ColumnInfo): void {
+  const value = cell.getValue();
+  const initialText =
+    value === null || value === undefined ? "" : typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+
+  openEditModal(col.name, initialText, (raw) => {
+    let parsed: CellValue;
+    try {
+      parsed = parseEditedValue(raw, col);
+    } catch (err) {
+      setEditModalError((err as Error).message);
+      return;
+    }
+    setEditModalSaving();
+    statusEl.textContent = "Saving…";
+    postUpdate(rowIdOf(cell), cell.getField(), parsed);
+  });
+}
+
+function handleClearClick(cell: CellComponent): void {
+  statusEl.textContent = "Saving…";
+  postUpdate(rowIdOf(cell), cell.getField(), null);
 }
 
 function cellFormatter(cell: CellComponent): HTMLElement {
   const value = cell.getValue();
   const isNull = value === null || value === undefined;
   const text = isNull ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  const col = columnInfoMap[cell.getField()];
 
   const wrapper = document.createElement("div");
   wrapper.className = "cell-content";
@@ -55,17 +82,38 @@ function cellFormatter(cell: CellComponent): HTMLElement {
   textSpan.textContent = text;
   wrapper.appendChild(textSpan);
 
+  const actions = document.createElement("div");
+  actions.className = "cell-actions";
+
   if (!isNull) {
-    const copyBtn = document.createElement("button");
-    copyBtn.type = "button";
-    copyBtn.className = "cell-copy-btn";
-    copyBtn.title = "Copy value";
-    copyBtn.innerHTML = COPY_ICON_SVG;
+    const copyBtn = makeIconButton(COPY_ICON_SVG, "Copy value");
     copyBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       copyToClipboard(text, copyBtn);
     });
-    wrapper.appendChild(copyBtn);
+    actions.appendChild(copyBtn);
+  }
+
+  if (col && isEditableType(col.type)) {
+    const editBtn = makeIconButton(EDIT_ICON_SVG, "Edit value");
+    editBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handleEditClick(cell, col);
+    });
+    actions.appendChild(editBtn);
+  }
+
+  if (!isNull && col?.nullable) {
+    const clearBtn = makeIconButton(CLEAR_ICON_SVG, "Clear value (set to null)");
+    clearBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handleClearClick(cell);
+    });
+    actions.appendChild(clearBtn);
+  }
+
+  if (actions.childElementCount > 0) {
+    wrapper.appendChild(actions);
   }
 
   return wrapper;
@@ -89,6 +137,14 @@ const rowNumberColumn: ColumnDefinition = {
   },
 };
 
+function isListType(type: string): boolean {
+  return /list/i.test(type);
+}
+
+function isEditableType(type: string): boolean {
+  return !/struct|map|binary/i.test(type);
+}
+
 function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
   return [
     rowNumberColumn,
@@ -104,12 +160,51 @@ function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
   ];
 }
 
+function parseEditedValue(raw: string, col: ColumnInfo): CellValue {
+  const trimmed = raw.trim();
+  if (trimmed === "") {
+    if (col.nullable) {
+      return null;
+    }
+    throw new Error("Value cannot be empty");
+  }
+  if (isListType(col.type)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      throw new Error("Invalid JSON array");
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error("Expected a JSON array");
+    }
+    return parsed as CellValue[];
+  }
+  if (/^bool/i.test(col.type)) {
+    return trimmed.toLowerCase() === "true" || trimmed === "1";
+  }
+  if (/int|float|double|decimal/i.test(col.type)) {
+    const num = Number(trimmed);
+    if (Number.isNaN(num)) {
+      throw new Error("Invalid number");
+    }
+    return num;
+  }
+  return raw;
+}
+
 let table: InstanceType<typeof Tabulator> | undefined;
 let currentColumnKey = "";
+let columnInfoMap: Record<string, ColumnInfo> = {};
+let suppressNextStatusClear = false;
+let lastRenderedOffset: number | undefined;
 
 function render(page: PageMessage): void {
   const columnKey = page.columns.map((c) => `${c.name}:${c.type}`).join("|");
+  const sameOffset = lastRenderedOffset === page.offset;
+  lastRenderedOffset = page.offset;
   currentOffset = page.offset;
+  columnInfoMap = Object.fromEntries(page.columns.map((c) => [c.name, c]));
 
   if (!table) {
     table = new Tabulator("#grid", {
@@ -125,7 +220,13 @@ function render(page: PageMessage): void {
       table.setColumns(buildColumns(page.columns));
       currentColumnKey = columnKey;
     }
-    table.setData(page.rows);
+    // Same page reloading after an edit/clear: replaceData keeps scroll position
+    // and avoids the full row teardown/rebuild setData does.
+    if (sameOffset) {
+      table.replaceData(page.rows);
+    } else {
+      table.setData(page.rows);
+    }
   }
 
   const end = Math.min(page.offset + page.limit, page.rowCount);
@@ -134,16 +235,37 @@ function render(page: PageMessage): void {
   rangeEl.textContent = `Page ${currentPage} of ${totalPages} · ${page.rowCount} rows total`;
   prevBtn.disabled = page.offset <= 0;
   nextBtn.disabled = end >= page.rowCount;
-  statusEl.textContent = "";
+  if (suppressNextStatusClear) {
+    suppressNextStatusClear = false;
+  } else {
+    statusEl.textContent = "";
+  }
 }
 
-window.addEventListener("message", (event: MessageEvent<PageMessage | ErrorMessage>) => {
-  const message = event.data;
+onMessage((message) => {
   if (message.type === "page") {
     render(message);
   } else if (message.type === "error") {
     statusEl.textContent = `Error: ${message.message}`;
+  } else if (message.type === "updateResult") {
+    if (message.ok) {
+      statusEl.textContent = "Saved";
+      suppressNextStatusClear = true;
+      setTimeout(() => {
+        if (statusEl.textContent === "Saved") {
+          statusEl.textContent = "";
+        }
+      }, 1500);
+      if (isEditModalOpen()) {
+        closeEditModal();
+      }
+    } else {
+      statusEl.textContent = `Error: ${message.message}`;
+      if (isEditModalOpen()) {
+        setEditModalError(message.message ?? "Update failed");
+      }
+    }
   }
 });
 
-vscode.postMessage({ type: "ready" });
+postReady();

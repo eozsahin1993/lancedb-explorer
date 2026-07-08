@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { getTablePage } from "../services/lancedbService";
+import { getTablePage, updateCellValue } from "../services/lancedbService";
 
 const PAGE_SIZE = 100;
 
@@ -45,6 +45,14 @@ export function openTablePanel(context: vscode.ExtensionContext, dbPath: string,
       await loadPage(Math.max(0, offset - PAGE_SIZE));
     } else if (message.type === "refresh") {
       await loadPage(offset);
+    } else if (message.type === "update") {
+      try {
+        await updateCellValue(dbPath, tableName, message.rowId, message.field, message.value);
+        panel.webview.postMessage({ type: "updateResult", ok: true });
+        await loadPage(offset);
+      } catch (err) {
+        panel.webview.postMessage({ type: "updateResult", ok: false, message: (err as Error).message });
+      }
     }
   });
 }

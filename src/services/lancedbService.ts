@@ -1,4 +1,8 @@
-import * as lancedb from "@lancedb/lancedb";
+import type * as lancedb from "@lancedb/lancedb";
+import { closeConnection, getTable, listTables } from "./lancedbConnection";
+import { toDisplayValue } from "./displayValue";
+
+export { closeConnection, listTables };
 
 export interface ColumnInfo {
   name: string;
@@ -14,30 +18,9 @@ export interface TablePage {
   limit: number;
 }
 
-const OPEN_CONNECTIONS = new Map<string, lancedb.Connection>();
+export type CellValue = string | number | boolean | null | CellValue[];
 
-async function getConnection(dbPath: string): Promise<lancedb.Connection> {
-  let conn = OPEN_CONNECTIONS.get(dbPath);
-  if (!conn) {
-    conn = await lancedb.connect(dbPath);
-    OPEN_CONNECTIONS.set(dbPath, conn);
-  }
-  return conn;
-}
-
-export function closeConnection(dbPath: string): void {
-  OPEN_CONNECTIONS.delete(dbPath);
-}
-
-export async function listTables(dbPath: string): Promise<string[]> {
-  const conn = await getConnection(dbPath);
-  return conn.tableNames();
-}
-
-export async function getSchema(dbPath: string, tableName: string): Promise<ColumnInfo[]> {
-  const conn = await getConnection(dbPath);
-  const table = await conn.openTable(tableName);
-  const schema = await table.schema();
+function mapSchema(schema: Awaited<ReturnType<lancedb.Table["schema"]>>): ColumnInfo[] {
   return schema.fields.map((f) => ({
     name: f.name,
     type: f.type.toString(),
@@ -45,41 +28,9 @@ export async function getSchema(dbPath: string, tableName: string): Promise<Colu
   }));
 }
 
-function toDisplayValue(value: unknown): unknown {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value === "bigint") {
-    return value.toString();
-  }
-  // Arrow Vector-like columns (e.g. embedding vectors) come back as typed
-  // arrays or array-likes; truncate long vectors so the grid stays readable.
-  if (ArrayBuffer.isView(value)) {
-    const arr = Array.from(value as unknown as ArrayLike<number>);
-    return summarizeVector(arr);
-  }
-  if (Array.isArray(value)) {
-    if (value.length > 8 && value.every((v) => typeof v === "number")) {
-      return summarizeVector(value);
-    }
-    return value.map(toDisplayValue);
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = toDisplayValue(v);
-    }
-    return out;
-  }
-  return value;
-}
-
-function summarizeVector(arr: number[]): string {
-  const preview = arr.slice(0, 4).map((n) => (Number.isInteger(n) ? n : n.toFixed(4)));
-  return `[${preview.join(", ")}${arr.length > 4 ? ", …" : ""}] (dim=${arr.length})`;
+export async function getSchema(dbPath: string, tableName: string): Promise<ColumnInfo[]> {
+  const table = await getTable(dbPath, tableName);
+  return mapSchema(await table.schema());
 }
 
 export async function getTablePage(
@@ -88,24 +39,42 @@ export async function getTablePage(
   offset: number,
   limit: number,
 ): Promise<TablePage> {
-  const conn = await getConnection(dbPath);
-  const table = await conn.openTable(tableName);
-  const [schema, rowCount] = await Promise.all([getSchema(dbPath, tableName), table.countRows()]);
+  const table = await getTable(dbPath, tableName);
+  const [rawSchema, rowCount] = await Promise.all([table.schema(), table.countRows()]);
+  const schema = mapSchema(rawSchema);
 
   const results = await table
     .query()
     .select(schema.map((c) => c.name))
+    .withRowId()
     .offset(offset)
     .limit(limit)
     .toArray();
 
   const rows = results.map((row) => {
+    const record = row as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const col of schema) {
-      out[col.name] = toDisplayValue((row as Record<string, unknown>)[col.name]);
+      out[col.name] = toDisplayValue(record[col.name]);
     }
+    const rowId = record._rowid;
+    out.__rowid = typeof rowId === "bigint" ? rowId.toString() : String(rowId);
     return out;
   });
 
   return { columns: schema, rows, rowCount, offset, limit };
+}
+
+export async function updateCellValue(
+  dbPath: string,
+  tableName: string,
+  rowId: string,
+  columnName: string,
+  value: CellValue,
+): Promise<void> {
+  const table = await getTable(dbPath, tableName);
+  await table.update({
+    where: `_rowid = ${rowId}`,
+    values: { [columnName]: value },
+  });
 }
