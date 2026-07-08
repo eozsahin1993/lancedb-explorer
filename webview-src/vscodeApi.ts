@@ -29,6 +29,14 @@ export function postUpdate(rowId: string, field: string, value: CellValue): void
   vscode.postMessage({ type: "update", rowId, field, value });
 }
 
+export function postSort(column: string | null, ascending: boolean): void {
+  vscode.postMessage({ type: "sort", column, ascending });
+}
+
+export function postFilter(filters: { column: string; value: string }[]): void {
+  vscode.postMessage({ type: "filter", filters });
+}
+
 export function onMessage(handler: (message: InboundMessage) => void): void {
   window.addEventListener("message", (event: MessageEvent<InboundMessage>) => handler(event.data));
 }

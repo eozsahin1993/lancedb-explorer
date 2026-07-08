@@ -1,8 +1,10 @@
 import type * as lancedb from "@lancedb/lancedb";
 import { closeConnection, getTable, listTables } from "./lancedbConnection";
 import { toDisplayValue } from "./displayValue";
+import { buildWhereClause, type FilterSpec } from "./queryFilter";
 
 export { closeConnection, listTables };
+export type { FilterSpec };
 
 export interface ColumnInfo {
   name: string;
@@ -19,6 +21,11 @@ export interface TablePage {
 }
 
 export type CellValue = string | number | boolean | null | CellValue[];
+
+export interface SortSpec {
+  column: string;
+  ascending: boolean;
+}
 
 function mapSchema(schema: Awaited<ReturnType<lancedb.Table["schema"]>>): ColumnInfo[] {
   return schema.fields.map((f) => ({
@@ -38,18 +45,23 @@ export async function getTablePage(
   tableName: string,
   offset: number,
   limit: number,
+  sort?: SortSpec,
+  filters?: FilterSpec[],
 ): Promise<TablePage> {
   const table = await getTable(dbPath, tableName);
-  const [rawSchema, rowCount] = await Promise.all([table.schema(), table.countRows()]);
-  const schema = mapSchema(rawSchema);
+  const schema = mapSchema(await table.schema());
+  const whereClause = buildWhereClause(filters, schema);
+  const rowCount = await table.countRows(whereClause);
 
-  const results = await table
-    .query()
-    .select(schema.map((c) => c.name))
-    .withRowId()
-    .offset(offset)
-    .limit(limit)
-    .toArray();
+  let query = table.query().select(schema.map((c) => c.name)).withRowId();
+  if (whereClause) {
+    query = query.where(whereClause);
+  }
+  if (sort && schema.some((c) => c.name === sort.column)) {
+    query = query.orderBy([{ columnName: sort.column, ascending: sort.ascending }]);
+  }
+
+  const results = await query.offset(offset).limit(limit).toArray();
 
   const rows = results.map((row) => {
     const record = row as Record<string, unknown>;

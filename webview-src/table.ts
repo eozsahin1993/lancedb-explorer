@@ -3,8 +3,9 @@ import type { CellComponent, ColumnDefinition } from "tabulator-tables";
 import type { CellValue, ColumnInfo } from "../src/services/lancedbService";
 import { onMessage, postNext, postPrev, postReady, postRefresh, postUpdate, type PageMessage } from "./vscodeApi";
 import { closeEditModal, isEditModalOpen, openEditModal, setEditModalError, setEditModalSaving } from "./editModal";
+import { buildColumnHeaderEl } from "./columnHeader";
+import { copyToClipboard, makeIconButton } from "./utils";
 import COPY_ICON_SVG from "../media/icons/copy.svg";
-import CHECK_ICON_SVG from "../media/icons/check.svg";
 import EDIT_ICON_SVG from "../media/icons/edit.svg";
 import CLEAR_ICON_SVG from "../media/icons/clear.svg";
 import "./tabulator-vscode-theme.css";
@@ -18,26 +19,6 @@ const statusEl = document.getElementById("status") as HTMLElement;
 prevBtn.addEventListener("click", postPrev);
 nextBtn.addEventListener("click", postNext);
 refreshBtn.addEventListener("click", postRefresh);
-
-function copyToClipboard(text: string, button: HTMLButtonElement): void {
-  navigator.clipboard.writeText(text).then(() => {
-    button.innerHTML = CHECK_ICON_SVG;
-    button.classList.add("cell-icon-btn-done");
-    setTimeout(() => {
-      button.innerHTML = COPY_ICON_SVG;
-      button.classList.remove("cell-icon-btn-done");
-    }, 1000);
-  });
-}
-
-function makeIconButton(svg: string, title: string): HTMLButtonElement {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "cell-icon-btn";
-  btn.title = title;
-  btn.innerHTML = svg;
-  return btn;
-}
 
 function rowIdOf(cell: CellComponent): string {
   const rowData = cell.getRow().getData() as Record<string, unknown>;
@@ -68,20 +49,7 @@ function handleClearClick(cell: CellComponent): void {
   postUpdate(rowIdOf(cell), cell.getField(), null);
 }
 
-function cellFormatter(cell: CellComponent): HTMLElement {
-  const value = cell.getValue();
-  const isNull = value === null || value === undefined;
-  const text = isNull ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
-  const col = columnInfoMap[cell.getField()];
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "cell-content";
-
-  const textSpan = document.createElement("span");
-  textSpan.className = isNull ? "cell-null" : "cell-text";
-  textSpan.textContent = text;
-  wrapper.appendChild(textSpan);
-
+function buildCellActions(cell: CellComponent, text: string, isNull: boolean, col: ColumnInfo | undefined): HTMLElement {
   const actions = document.createElement("div");
   actions.className = "cell-actions";
 
@@ -112,9 +80,37 @@ function cellFormatter(cell: CellComponent): HTMLElement {
     actions.appendChild(clearBtn);
   }
 
-  if (actions.childElementCount > 0) {
-    wrapper.appendChild(actions);
-  }
+  return actions;
+}
+
+function cellFormatter(cell: CellComponent): HTMLElement {
+  const value = cell.getValue();
+  const isNull = value === null || value === undefined;
+  const text = isNull ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  const col = columnInfoMap[cell.getField()];
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "cell-content";
+
+  const textSpan = document.createElement("span");
+  textSpan.className = isNull ? "cell-null" : "cell-text";
+  textSpan.textContent = text;
+  wrapper.appendChild(textSpan);
+
+  // Action buttons (copy/edit/clear) are only visible on hover, but building
+  // them eagerly for every cell up front adds several DOM nodes + inline SVG
+  // per cell across the whole page, which is heavy enough to cause visible
+  // scroll/layout jank. Build them lazily on first hover instead.
+  wrapper.addEventListener(
+    "mouseenter",
+    () => {
+      const actions = buildCellActions(cell, text, isNull, col);
+      if (actions.childElementCount > 0) {
+        wrapper.appendChild(actions);
+      }
+    },
+    { once: true },
+  );
 
   return wrapper;
 }
@@ -145,6 +141,19 @@ function isEditableType(type: string): boolean {
   return !/struct|map|binary/i.test(type);
 }
 
+let currentColumnsList: ColumnInfo[] = [];
+
+function handleSortChange(): void {
+  forceFullRender = true;
+  if (table && currentColumnsList.length > 0) {
+    table.setColumns(buildColumns(currentColumnsList));
+  }
+}
+
+function handleFilterChange(): void {
+  forceFullRender = true;
+}
+
 function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
   return [
     rowNumberColumn,
@@ -152,10 +161,13 @@ function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
       title: col.name,
       field: col.name,
       headerTooltip: col.type,
+      headerSort: false,
       resizable: true,
       tooltip: true,
       maxWidth: COLUMN_MAX_WIDTH,
       formatter: cellFormatter,
+      titleFormatter: () =>
+        buildColumnHeaderEl(col, { onSortChange: handleSortChange, onFilterChange: handleFilterChange }),
     })),
   ];
 }
@@ -198,13 +210,16 @@ let currentColumnKey = "";
 let columnInfoMap: Record<string, ColumnInfo> = {};
 let suppressNextStatusClear = false;
 let lastRenderedOffset: number | undefined;
+let forceFullRender = false;
 
 function render(page: PageMessage): void {
   const columnKey = page.columns.map((c) => `${c.name}:${c.type}`).join("|");
-  const sameOffset = lastRenderedOffset === page.offset;
+  const sameOffset = lastRenderedOffset === page.offset && !forceFullRender;
+  forceFullRender = false;
   lastRenderedOffset = page.offset;
   currentOffset = page.offset;
   columnInfoMap = Object.fromEntries(page.columns.map((c) => [c.name, c]));
+  currentColumnsList = page.columns;
 
   if (!table) {
     table = new Tabulator("#grid", {
@@ -221,7 +236,8 @@ function render(page: PageMessage): void {
       currentColumnKey = columnKey;
     }
     // Same page reloading after an edit/clear: replaceData keeps scroll position
-    // and avoids the full row teardown/rebuild setData does.
+    // and avoids the full row teardown/rebuild setData does. A sort/filter change
+    // always forces a full reset even if it lands back on the same offset.
     if (sameOffset) {
       table.replaceData(page.rows);
     } else {

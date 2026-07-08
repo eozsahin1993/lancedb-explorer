@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { getTablePage, updateCellValue } from "../services/lancedbService";
+import { getTablePage, updateCellValue, type FilterSpec, type SortSpec } from "../services/lancedbService";
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 50;
 
 const OPEN_PANELS = new Map<string, vscode.WebviewPanel>();
 
@@ -25,10 +25,12 @@ export function openTablePanel(context: vscode.ExtensionContext, dbPath: string,
   panel.webview.html = renderShell(panel.webview, context, tableName);
 
   let offset = 0;
+  let sort: SortSpec | undefined;
+  let filters: FilterSpec[] = [];
 
   const loadPage = async (nextOffset: number) => {
     try {
-      const page = await getTablePage(dbPath, tableName, nextOffset, PAGE_SIZE);
+      const page = await getTablePage(dbPath, tableName, nextOffset, PAGE_SIZE, sort, filters);
       offset = nextOffset;
       panel.webview.postMessage({ type: "page", ...page });
     } catch (err) {
@@ -45,6 +47,12 @@ export function openTablePanel(context: vscode.ExtensionContext, dbPath: string,
       await loadPage(Math.max(0, offset - PAGE_SIZE));
     } else if (message.type === "refresh") {
       await loadPage(offset);
+    } else if (message.type === "sort") {
+      sort = message.column ? { column: message.column, ascending: message.ascending } : undefined;
+      await loadPage(0);
+    } else if (message.type === "filter") {
+      filters = message.filters;
+      await loadPage(0);
     } else if (message.type === "update") {
       try {
         await updateCellValue(dbPath, tableName, message.rowId, message.field, message.value);
