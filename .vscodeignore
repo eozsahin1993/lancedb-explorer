@@ -5,7 +5,15 @@
 **
 
 !dist/**
-!media/**
+# media/demo.gif is intentionally excluded here -- it's only used in
+# README.md, which vsce rewrites to a raw GitHub URL at publish time, so it
+# doesn't need to ship in the installable package. Everything below is listed
+# individually rather than as "!media/**" since re-excluding one file inside
+# an already-negated directory doesn't reliably override the negation.
+!media/icon.svg
+!media/lance-db-explorer-logo.png
+!media/shell.css
+!media/icons/**
 !package.json
 !README.md
 !LICENSE

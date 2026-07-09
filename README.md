@@ -2,6 +2,8 @@
 
 Browse LanceDB databases and tables directly inside VS Code.
 
+![LanceDB Explorer demo](media/demo.gif)
+
 ## Features
 
 - Open any local LanceDB database from the sidebar and browse its tables in a tree view.
