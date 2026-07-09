@@ -50,8 +50,6 @@ jobs:
         with:
           node-version: 20
 
-      # Build with the toolchain native to this runner (esbuild/typescript are
-      # devDependencies and never ship in the .vsix, so their platform doesn't matter).
       - name: Install dependencies and build
         run: |
           npm ci
@@ -62,6 +60,9 @@ jobs:
       # regardless of this runner's actual platform.
       - name: Install target-specific runtime dependencies
         run: npm ci --omit=dev --os=${{ matrix.os }} --cpu=${{ matrix.cpu }} --libc=${{ matrix.libc }}
+
+      - name: Restore esbuild for this runner
+        run: npm install esbuild --no-save
 
       - name: Package extension
         run: npx vsce package --target ${{ matrix.target }} --out lancedb-explorer-${{ github.ref_name }}-${{ matrix.target }}.vsix
@@ -85,3 +86,34 @@ jobs:
         with:
           files: artifacts/*.vsix
           generate_release_notes: true
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: marketplace-publish
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Publish to VS Code Marketplace
+        run: npx vsce publish --packagePath artifacts/*.vsix --skip-duplicate --azure-credential

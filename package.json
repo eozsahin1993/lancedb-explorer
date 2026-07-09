@@ -3,8 +3,7 @@
   "displayName": "LanceDB Explorer",
   "description": "Browse LanceDB databases and tables from within VS Code",
   "version": "1.0.0",
-  "publisher": "local",
-  "private": true,
+  "publisher": "EmreOzsahin",
   "license": "Apache-2.0",
   "icon": "media/lance-db-explorer-logo.png",
   "repository": {
