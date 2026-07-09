@@ -5,7 +5,8 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 export type PageMessage = TablePage & { type: "page" };
 export type ErrorMessage = { type: "error"; message: string };
 export type UpdateResultMessage = { type: "updateResult"; ok: boolean; message?: string };
-export type InboundMessage = PageMessage | ErrorMessage | UpdateResultMessage;
+export type DeleteResultMessage = { type: "deleteResult"; ok: boolean; message?: string };
+export type InboundMessage = PageMessage | ErrorMessage | UpdateResultMessage | DeleteResultMessage;
 
 const vscode = acquireVsCodeApi();
 
@@ -35,6 +36,10 @@ export function postSort(column: string | null, ascending: boolean): void {
 
 export function postFilter(filters: { column: string; value: string }[]): void {
   vscode.postMessage({ type: "filter", filters });
+}
+
+export function postDelete(rowId: string): void {
+  vscode.postMessage({ type: "delete", rowId });
 }
 
 export function onMessage(handler: (message: InboundMessage) => void): void {

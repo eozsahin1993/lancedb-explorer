@@ -1,13 +1,23 @@
 import { TabulatorFull as Tabulator } from "tabulator-tables";
 import type { CellComponent, ColumnDefinition } from "tabulator-tables";
 import type { CellValue, ColumnInfo } from "../src/services/lancedbService";
-import { onMessage, postNext, postPrev, postReady, postRefresh, postUpdate, type PageMessage } from "./vscodeApi";
+import {
+  onMessage,
+  postDelete,
+  postNext,
+  postPrev,
+  postReady,
+  postRefresh,
+  postUpdate,
+  type PageMessage,
+} from "./vscodeApi";
 import { closeEditModal, isEditModalOpen, openEditModal, setEditModalError, setEditModalSaving } from "./editModal";
 import { buildColumnHeaderEl, isColumnPinned } from "./columnHeader";
 import { copyToClipboard, makeIconButton } from "./utils";
 import COPY_ICON_SVG from "../media/icons/copy.svg";
 import EDIT_ICON_SVG from "../media/icons/edit.svg";
 import CLEAR_ICON_SVG from "../media/icons/clear.svg";
+import DELETE_ICON_SVG from "../media/icons/delete.svg";
 import "./tabulator-vscode-theme.css";
 
 const prevBtn = document.getElementById("prev") as HTMLButtonElement;
@@ -47,6 +57,58 @@ function handleEditClick(cell: CellComponent, col: ColumnInfo): void {
 function handleClearClick(cell: CellComponent): void {
   statusEl.textContent = "Saving…";
   postUpdate(rowIdOf(cell), cell.getField(), null);
+}
+
+function buildDeleteConfirmEl(onConfirm: () => void): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "delete-confirm";
+
+  const message = document.createElement("div");
+  message.className = "delete-confirm-message";
+  message.textContent = "Delete this row? This can't be undone.";
+  wrapper.appendChild(message);
+
+  const actions = document.createElement("div");
+  actions.className = "delete-confirm-actions";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "delete-confirm-btn";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => table?.clearAlert());
+  actions.appendChild(cancelBtn);
+
+  const confirmBtn = document.createElement("button");
+  confirmBtn.type = "button";
+  confirmBtn.className = "delete-confirm-btn delete-confirm-btn-danger";
+  confirmBtn.textContent = "Delete";
+  confirmBtn.addEventListener("click", () => {
+    table?.clearAlert();
+    onConfirm();
+  });
+  actions.appendChild(confirmBtn);
+
+  wrapper.appendChild(actions);
+  return wrapper;
+}
+
+// Tabulator's alert() type only declares a string parameter, but the actual
+// implementation also accepts an HTMLElement (used here to render Cancel/
+// Delete buttons rather than a plain message) -- see tabulator-tables' own
+// Alert module, which does `content instanceof HTMLElement` before falling
+// back to treating it as an HTML string.
+function showAlert(content: HTMLElement): void {
+  (table?.alert as unknown as ((content: HTMLElement) => void) | undefined)?.(content);
+}
+
+function handleDeleteClick(cell: CellComponent): void {
+  const rowId = rowIdOf(cell);
+  showAlert(
+    buildDeleteConfirmEl(() => {
+      statusEl.textContent = "Deleting…";
+      postDelete(rowId);
+    }),
+  );
 }
 
 function buildCellActions(cell: CellComponent, text: string, isNull: boolean, col: ColumnInfo | undefined): HTMLElement {
@@ -122,14 +184,39 @@ let currentOffset = 0;
 const rowNumberColumn: ColumnDefinition = {
   title: "#",
   field: "__rowNumber",
-  hozAlign: "right",
   headerSort: false,
   resizable: false,
   frozen: true,
-  width: 60,
+  width: 70,
   formatter: (cell) => {
     const position = cell.getRow().getPosition();
-    return String(currentOffset + (typeof position === "number" ? position : 0));
+    const rowNum = String(currentOffset + (typeof position === "number" ? position : 0));
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "row-number-cell";
+
+    const numSpan = document.createElement("span");
+    numSpan.className = "row-number-text";
+    numSpan.textContent = rowNum;
+    wrapper.appendChild(numSpan);
+
+    // Same lazy-build-on-hover pattern as cell actions -- avoids building a
+    // delete button for every row up front.
+    wrapper.addEventListener(
+      "mouseenter",
+      () => {
+        const deleteBtn = makeIconButton(DELETE_ICON_SVG, "Delete row");
+        deleteBtn.classList.add("row-delete-btn");
+        deleteBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          handleDeleteClick(cell);
+        });
+        wrapper.appendChild(deleteBtn);
+      },
+      { once: true },
+    );
+
+    return wrapper;
   },
 };
 
@@ -347,6 +434,18 @@ onMessage((message) => {
       if (isEditModalOpen()) {
         setEditModalError(message.message ?? "Update failed");
       }
+    }
+  } else if (message.type === "deleteResult") {
+    if (message.ok) {
+      statusEl.textContent = "Deleted";
+      suppressNextStatusClear = true;
+      setTimeout(() => {
+        if (statusEl.textContent === "Deleted") {
+          statusEl.textContent = "";
+        }
+      }, 1500);
+    } else {
+      statusEl.textContent = `Error: ${message.message}`;
     }
   }
 });

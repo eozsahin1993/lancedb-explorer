@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { getTablePage, updateCellValue, type FilterSpec, type SortSpec } from "../services/lancedbService";
+import { deleteRow, getTablePage, updateCellValue, type FilterSpec, type SortSpec } from "../services/lancedbService";
 
 const PAGE_SIZE = 50;
 
@@ -60,6 +60,14 @@ export function openTablePanel(context: vscode.ExtensionContext, dbPath: string,
         await loadPage(offset);
       } catch (err) {
         panel.webview.postMessage({ type: "updateResult", ok: false, message: (err as Error).message });
+      }
+    } else if (message.type === "delete") {
+      try {
+        await deleteRow(dbPath, tableName, message.rowId);
+        panel.webview.postMessage({ type: "deleteResult", ok: true });
+        await loadPage(offset);
+      } catch (err) {
+        panel.webview.postMessage({ type: "deleteResult", ok: false, message: (err as Error).message });
       }
     }
   });

@@ -373,3 +373,99 @@
   background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
   color: var(--vscode-foreground);
 }
+
+.row-number-cell {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.row-number-text {
+  display: block;
+  text-align: right;
+  color: var(--vscode-descriptionForeground);
+}
+
+.row-delete-btn {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tabulator-row .tabulator-cell:hover .row-delete-btn {
+  opacity: 1;
+}
+
+.row-delete-btn:hover {
+  background: var(--vscode-inputValidation-errorBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.tabulator .tabulator-alert {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.tabulator .tabulator-alert .tabulator-alert-msg,
+.tabulator .tabulator-alert .tabulator-alert-msg.tabulator-alert-state-msg {
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  font-weight: normal;
+  font-size: 13px;
+}
+
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.delete-confirm-message {
+  text-align: left;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-confirm-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 3px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-confirm-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
+.delete-confirm-btn-danger {
+  background: var(--vscode-statusBarItem-errorBackground, #c72e2e);
+  color: var(--vscode-statusBarItem-errorForeground, #fff);
+}
+
+.delete-confirm-btn-danger:hover {
+  opacity: 0.85;
+}

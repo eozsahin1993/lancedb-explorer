@@ -90,3 +90,8 @@ export async function updateCellValue(
     values: { [columnName]: value },
   });
 }
+
+export async function deleteRow(dbPath: string, tableName: string, rowId: string): Promise<void> {
+  const table = await getTable(dbPath, tableName);
+  await table.delete(`_rowid = ${rowId}`);
+}
