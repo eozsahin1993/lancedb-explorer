@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { deleteRow, getTablePage, updateCellValue } from "../services/lancedbService";
+import { deleteRow, getTablePage, updateCellValue } from "../lancedb/tableRepository";
 
 const OPEN_PANELS = new Map<string, vscode.WebviewPanel>();
 

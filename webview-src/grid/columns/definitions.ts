@@ -1,5 +1,5 @@
 import type { ColumnDefinition } from "tabulator-tables";
-import type { ColumnInfo } from "../../../src/services/lancedbService";
+import type { ColumnInfo } from "../../../src/lancedb/types";
 import { buildColumnHeaderEl, isColumnPinned } from "../header/columnHeader";
 import { handleDeleteClick } from "../rowActions/rowDelete";
 import { cellFormatter } from "./cellActions";

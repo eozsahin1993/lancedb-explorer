@@ -1,9 +1,4 @@
-import type { ColumnInfo } from "./lancedbService";
-
-export interface FilterSpec {
-  column: string;
-  value: string;
-}
+import type { ColumnInfo, FilterSpec } from "./types";
 
 function escapeSqlString(value: string): string {
   return value.replace(/'/g, "''");

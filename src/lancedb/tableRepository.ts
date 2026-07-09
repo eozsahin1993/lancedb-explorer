@@ -1,31 +1,11 @@
 import type * as lancedb from "@lancedb/lancedb";
-import { closeConnection, getTable, listTables } from "./lancedbConnection";
+import { getTable, listTables } from "./connectionPool";
 import { toDisplayValue } from "./displayValue";
-import { buildWhereClause, type FilterSpec } from "./queryFilter";
+import { buildWhereClause } from "./queryFilter";
+import type { CellValue, ColumnInfo, FilterSpec, SortSpec, TablePage } from "./types";
 
-export { closeConnection, listTables };
-export type { FilterSpec };
-
-export interface ColumnInfo {
-  name: string;
-  type: string;
-  nullable: boolean;
-}
-
-export interface TablePage {
-  columns: ColumnInfo[];
-  rows: Record<string, unknown>[];
-  rowCount: number;
-  offset: number;
-  limit: number;
-}
-
-export type CellValue = string | number | boolean | null | CellValue[];
-
-export interface SortSpec {
-  column: string;
-  ascending: boolean;
-}
+export { listTables };
+export type { CellValue, ColumnInfo, FilterSpec, SortSpec, TablePage };
 
 function mapSchema(schema: Awaited<ReturnType<lancedb.Table["schema"]>>): ColumnInfo[] {
   return schema.fields.map((f) => ({

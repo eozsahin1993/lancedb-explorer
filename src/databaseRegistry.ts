@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { closeConnection } from "./lancedbService";
+import { closeConnection } from "./lancedb/connectionPool";
 
 const STORAGE_KEY = "lancedbExplorer.databasePaths";
 
-export class DatabaseStore {
+export class DatabaseRegistry {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   list(): string[] {

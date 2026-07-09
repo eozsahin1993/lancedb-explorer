@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { DatabaseStore } from "../services/databaseStore";
-import { listTables } from "../services/lancedbService";
+import { DatabaseRegistry } from "../databaseRegistry";
+import { listTables } from "../lancedb/tableRepository";
 
 type Node = DatabaseNode | TablesGroupNode | TableNode;
 
@@ -27,7 +27,7 @@ export class LanceDbTreeProvider implements vscode.TreeDataProvider<Node> {
   private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<Node | undefined | void>();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
-  constructor(private readonly store: DatabaseStore) {}
+  constructor(private readonly store: DatabaseRegistry) {}
 
   refresh(): void {
     this.onDidChangeTreeDataEmitter.fire();

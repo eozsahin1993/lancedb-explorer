@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { DatabaseStore } from "./services/databaseStore";
+import { DatabaseRegistry } from "./databaseRegistry";
 import { LanceDbTreeProvider, DatabaseNode, TableNode } from "./ui/treeProvider";
 import { openTablePanel } from "./ui/tablePanel";
 
 export function activate(context: vscode.ExtensionContext): void {
-  const store = new DatabaseStore(context);
+  const store = new DatabaseRegistry(context);
   const treeProvider = new LanceDbTreeProvider(store);
 
   vscode.window.registerTreeDataProvider("lancedbExplorer.databases", treeProvider);

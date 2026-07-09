@@ -1,4 +1,4 @@
-import type { TablePage } from "../../../src/services/lancedbService";
+import type { TablePage } from "../../../src/lancedb/types";
 import { requestPage } from "../../vscodeApi";
 import { getActiveFilters, getActiveSort } from "../header/columnHeader";
 import { buildColumns, setCurrentColumnsList, setCurrentOffset } from "../columns/definitions";

@@ -11,5 +11,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["webview-src/**/*.ts", "src/services/lancedbService.ts"]
+  "include": ["webview-src/**/*.ts", "src/lancedb/types.ts"]
 }

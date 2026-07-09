@@ -1,4 +1,4 @@
-import type { CellValue, FilterSpec, SortSpec, TablePage } from "../src/services/lancedbService";
+import type { CellValue, FilterSpec, SortSpec, TablePage } from "../src/lancedb/types";
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 

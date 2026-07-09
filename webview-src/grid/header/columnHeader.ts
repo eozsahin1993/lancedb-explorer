@@ -1,4 +1,4 @@
-import type { ColumnInfo, FilterSpec, SortSpec } from "../../../src/services/lancedbService";
+import type { ColumnInfo, FilterSpec, SortSpec } from "../../../src/lancedb/types";
 import { toggleFilterPopover } from "./filterPopover";
 import { makeIconButton } from "../../utils";
 import FILTER_ICON_SVG from "../../../media/icons/filter.svg";

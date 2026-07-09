@@ -1,5 +1,5 @@
 import type { CellComponent } from "tabulator-tables";
-import type { CellValue, ColumnInfo } from "../../../src/services/lancedbService";
+import type { CellValue, ColumnInfo } from "../../../src/lancedb/types";
 import { openEditModal, setEditModalError, setEditModalSaving } from "../rowActions/editModal";
 import { copyToClipboard, makeIconButton } from "../../utils";
 import { setStatus } from "../../status";
