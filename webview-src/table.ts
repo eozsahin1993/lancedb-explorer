@@ -172,7 +172,6 @@ function handleSortChange(): void {
 
 function handleFilterChange(): void {
   forceFullRender = true;
-  rebuildColumnsPreservingScroll();
 }
 
 // Pinning is purely a client-side layout choice (no query change), so it
