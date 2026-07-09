@@ -87,9 +87,13 @@ function rebuildColumnsPreservingScroll(): void {
 // Sort/filter state lives in header/columnHeader.ts and is read fresh by
 // pagination/dataSource.ts's ajaxRequestFunc on every request, so changing it
 // doesn't move data by itself -- setPage(1) forces Tabulator to pick it up.
+// setPage(1) must come first: dataSource.ts's scroll-preservation snapshot is
+// taken when this reload starts, and rebuildColumnsPreservingScroll's own
+// setColumns call resets scrollLeft to 0 synchronously -- reversing the
+// order would make that snapshot capture the already-reset value.
 function handleSortChange(): void {
-  rebuildColumnsPreservingScroll();
   table?.setPage(1);
+  rebuildColumnsPreservingScroll();
 }
 
 function handleFilterChange(): void {

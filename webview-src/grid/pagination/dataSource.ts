@@ -34,12 +34,17 @@ export function ajaxRequestFunc(_url: string, _config: unknown, params: { page: 
 
 // Preserves horizontal scroll across page turns, setPage(1), and replaceData
 // -- none of these should move which columns are in view, only which rows.
+// Must restore on renderComplete, not pageLoaded/dataLoaded: those fire
+// synchronously as part of Tabulator's internal "data-loaded" chain, which
+// runs BEFORE rowManager.setData() tears down and rebuilds the rows (that
+// teardown is what resets scrollLeft to 0) -- restoring at that point gets
+// clobbered a moment later. renderComplete fires after the rebuild.
 let scrollLeftBeforeLoad = 0;
 export function registerDataSourceEvents(): void {
   table?.on("dataLoading", () => {
     scrollLeftBeforeLoad = getScrollLeft();
   });
-  table?.on("pageLoaded", () => {
+  table?.on("renderComplete", () => {
     setScrollLeft(scrollLeftBeforeLoad);
   });
   table?.on("dataLoadError", (error: Error) => {
