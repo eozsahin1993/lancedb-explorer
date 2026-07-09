@@ -20,6 +20,10 @@ export async function getTable(dbPath: string, tableName: string): Promise<lance
     table = await conn.openTable(tableName);
     OPEN_TABLES.set(key, table);
   }
+  // A long-lived Table handle doesn't see rows written by another
+  // process/connection, so every operation needs to checkout the latest version of the table. 
+  // This is a no-op if the table is already at the latest version.
+  await table.checkoutLatest();
   return table;
 }
 

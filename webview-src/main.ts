@@ -8,7 +8,7 @@ import { setStatus, setStatusWithAutoClear } from "./status";
 import { initToolbar } from "./toolbar";
 import "./grid/theme.css";
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 40;
 
 setTable(
   new Tabulator("#grid", {

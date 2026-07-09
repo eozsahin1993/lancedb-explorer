@@ -68,16 +68,33 @@ body {
   animation: icon-btn-spin 0.6s linear infinite;
 }
 
-#status {
-  padding: 4px 8px;
-  font-size: 12px;
-  color: var(--vscode-descriptionForeground);
-  flex: none;
-}
-
 #grid-wrapper {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
+}
+
+#status {
+  position: absolute;
+  left: 12px;
+  bottom: 40px;
+  z-index: 10;
+  max-width: calc(100% - 24px);
+  padding: 4px 10px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+#status:empty {
+  display: none;
 }
 
 #grid {
