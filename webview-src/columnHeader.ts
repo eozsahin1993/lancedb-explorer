@@ -4,6 +4,7 @@ import { toggleFilterPopover } from "./filterPopover";
 import { makeIconButton } from "./utils";
 import FILTER_ICON_SVG from "../media/icons/filter.svg";
 import SORT_ICON_SVG from "../media/icons/sort.svg";
+import PIN_ICON_SVG from "../media/icons/pin.svg";
 
 // Scalars only -- sorting/filtering a list, struct, map, or binary column
 // through a text box or ORDER BY doesn't make sense.
@@ -14,6 +15,7 @@ export function isFilterableType(type: string): boolean {
 export interface ColumnHeaderCallbacks {
   onSortChange: () => void;
   onFilterChange: () => void;
+  onPinChange: () => void;
 }
 
 // Custom sort/filter state and header UI, driven only by direct clicks/typing
@@ -23,6 +25,11 @@ export interface ColumnHeaderCallbacks {
 // reloads triggered by us), which caused a refresh feedback loop.
 let activeSort: { column: string; ascending: boolean } | undefined;
 const activeFilters = new Map<string, string>();
+const pinnedColumns = new Set<string>();
+
+export function isColumnPinned(columnName: string): boolean {
+  return pinnedColumns.has(columnName);
+}
 
 function buildSortButton(col: ColumnInfo, onSortChange: () => void): HTMLButtonElement {
   const btn = makeIconButton(SORT_ICON_SVG, "Sort");
@@ -65,6 +72,22 @@ function buildFilterToggleButton(col: ColumnInfo, onFilterChange: () => void): H
   return btn;
 }
 
+function buildPinButton(col: ColumnInfo, onPinChange: () => void): HTMLButtonElement {
+  const btn = makeIconButton(PIN_ICON_SVG, "Pin column");
+  btn.classList.add("col-header-btn");
+  btn.classList.toggle("col-header-btn-active", pinnedColumns.has(col.name));
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (pinnedColumns.has(col.name)) {
+      pinnedColumns.delete(col.name);
+    } else {
+      pinnedColumns.add(col.name);
+    }
+    onPinChange();
+  });
+  return btn;
+}
+
 export function buildColumnHeaderEl(col: ColumnInfo, callbacks: ColumnHeaderCallbacks): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "col-header";
@@ -78,6 +101,7 @@ export function buildColumnHeaderEl(col: ColumnInfo, callbacks: ColumnHeaderCall
     wrapper.appendChild(buildSortButton(col, callbacks.onSortChange));
     wrapper.appendChild(buildFilterToggleButton(col, callbacks.onFilterChange));
   }
+  wrapper.appendChild(buildPinButton(col, callbacks.onPinChange));
 
   return wrapper;
 }

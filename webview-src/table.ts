@@ -3,7 +3,7 @@ import type { CellComponent, ColumnDefinition } from "tabulator-tables";
 import type { CellValue, ColumnInfo } from "../src/services/lancedbService";
 import { onMessage, postNext, postPrev, postReady, postRefresh, postUpdate, type PageMessage } from "./vscodeApi";
 import { closeEditModal, isEditModalOpen, openEditModal, setEditModalError, setEditModalSaving } from "./editModal";
-import { buildColumnHeaderEl } from "./columnHeader";
+import { buildColumnHeaderEl, isColumnPinned } from "./columnHeader";
 import { copyToClipboard, makeIconButton } from "./utils";
 import COPY_ICON_SVG from "../media/icons/copy.svg";
 import EDIT_ICON_SVG from "../media/icons/edit.svg";
@@ -143,27 +143,56 @@ function isEditableType(type: string): boolean {
 
 let currentColumnsList: ColumnInfo[] = [];
 
+// Sorting or filtering by a column rebuilds all headers (to refresh sort
+// arrows and pin the active column) and resets scroll as a side effect,
+// before the server round-trip that will eventually redraw the rows even
+// runs. Preserve horizontal scroll across it the same way the data reload does.
+function rebuildColumnsPreservingScroll(): void {
+  if (!table || currentColumnsList.length === 0) {
+    return;
+  }
+  const scrollLeft = getScrollLeft();
+  table.setColumns(buildColumns(currentColumnsList));
+  // setColumns already redraws internally, but it can run before the browser
+  // has actually measured the new columns' widths (they're dynamically sized
+  // by fitDataFill, unlike the row-number column's fixed width) -- so pinned
+  // columns' cumulative left offset gets computed off a not-yet-measured (0)
+  // width and they land on top of each other instead of side by side.
+  // Deferring one frame lets layout settle before forcing the recalculation.
+  requestAnimationFrame(() => {
+    table?.redraw();
+    setScrollLeft(scrollLeft);
+  });
+}
+
 function handleSortChange(): void {
   forceFullRender = true;
-  if (table && currentColumnsList.length > 0) {
-    // setColumns rebuilds the whole table (to refresh the sort-arrow icons on
-    // every header) and resets scroll as a side effect, before the server
-    // round-trip that will eventually redraw the rows even runs. Preserve
-    // horizontal scroll across it the same way the data reload does.
-    const scrollLeft = getScrollLeft();
-    table.setColumns(buildColumns(currentColumnsList));
-    setScrollLeft(scrollLeft);
-  }
+  rebuildColumnsPreservingScroll();
 }
 
 function handleFilterChange(): void {
   forceFullRender = true;
+  rebuildColumnsPreservingScroll();
 }
 
+// Pinning is purely a client-side layout choice (no query change), so it
+// doesn't need forceFullRender -- just rebuild the columns to apply it.
+function handlePinChange(): void {
+  rebuildColumnsPreservingScroll();
+}
+
+// Pinned columns get a fixed width instead of relying on fitDataFill's
+// dynamic content-based sizing. Tabulator computes each pinned column's
+// cumulative left offset from column.getWidth(), and a dynamically-sized
+// column's width isn't guaranteed to be measured yet at that point --
+// causing pinned columns to land at the same offset and overlap instead of
+// sitting side by side. A fixed width sidesteps that timing dependency.
+const PINNED_COLUMN_WIDTH = 200;
+
 function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
-  return [
-    rowNumberColumn,
-    ...columns.map((col) => ({
+  const defs = columns.map((col) => {
+    const pinned = isColumnPinned(col.name);
+    return {
       title: col.name,
       field: col.name,
       headerTooltip: col.type,
@@ -171,10 +200,29 @@ function buildColumns(columns: ColumnInfo[]): ColumnDefinition[] {
       resizable: true,
       tooltip: true,
       maxWidth: COLUMN_MAX_WIDTH,
+      width: pinned ? PINNED_COLUMN_WIDTH : undefined,
       formatter: cellFormatter,
+      frozen: pinned,
       titleFormatter: () =>
-        buildColumnHeaderEl(col, { onSortChange: handleSortChange, onFilterChange: handleFilterChange }),
-    })),
+        buildColumnHeaderEl(col, {
+          onSortChange: handleSortChange,
+          onFilterChange: handleFilterChange,
+          onPinChange: handlePinChange,
+        }),
+    };
+  });
+
+  // Tabulator requires frozen columns to be contiguous in the definition
+  // array -- it doesn't regroup them automatically -- so pinned columns have
+  // to be sorted to the front (right after the row-number column) rather
+  // than staying in their natural position.
+  const pinnedDefs = defs.filter((d) => d.frozen);
+  const unpinnedDefs = defs.filter((d) => !d.frozen);
+
+  return [
+    rowNumberColumn,
+    ...pinnedDefs,
+    ...unpinnedDefs,
   ];
 }
 
