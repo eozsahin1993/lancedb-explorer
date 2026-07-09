@@ -254,10 +254,29 @@
   color: var(--vscode-foreground);
 }
 
+.tabulator .tabulator-footer .tabulator-page {
+  border-color: var(--vscode-panel-border);
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.tabulator .tabulator-footer .tabulator-page:not(:disabled):hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.tabulator .tabulator-footer .tabulator-page.active {
+  color: var(--vscode-focusBorder);
+  border-color: var(--vscode-focusBorder);
+  font-weight: 600;
+}
+
 .tabulator .tabulator-tableholder {
   scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
-  /* Leave room below the last row so its hover actions aren't covered by the
-     horizontal scrollbar. */
+  /* box-sizing so this padding eats into Tabulator's own JS-computed pixel
+     height instead of extending past it -- otherwise it pushes the footer
+     below .tabulator's overflow:hidden bottom edge, clipping it. */
+  box-sizing: border-box;
   padding-bottom: 14px;
 }
 

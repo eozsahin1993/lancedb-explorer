@@ -1,10 +1,9 @@
-import type { ColumnInfo } from "../src/services/lancedbService";
-import { postFilter, postSort } from "./vscodeApi";
+import type { ColumnInfo, FilterSpec, SortSpec } from "../../../src/services/lancedbService";
 import { toggleFilterPopover } from "./filterPopover";
-import { makeIconButton } from "./utils";
-import FILTER_ICON_SVG from "../media/icons/filter.svg";
-import SORT_ICON_SVG from "../media/icons/sort.svg";
-import PIN_ICON_SVG from "../media/icons/pin.svg";
+import { makeIconButton } from "../../utils";
+import FILTER_ICON_SVG from "../../../media/icons/filter.svg";
+import SORT_ICON_SVG from "../../../media/icons/sort.svg";
+import PIN_ICON_SVG from "../../../media/icons/pin.svg";
 
 // Scalars only -- sorting/filtering a list, struct, map, or binary column
 // through a text box or ORDER BY doesn't make sense.
@@ -31,6 +30,16 @@ export function isColumnPinned(columnName: string): boolean {
   return pinnedColumns.has(columnName);
 }
 
+// Read by dataSource.ts's ajaxRequestFunc on every request instead of a
+// message round-trip.
+export function getActiveSort(): SortSpec | undefined {
+  return activeSort;
+}
+
+export function getActiveFilters(): FilterSpec[] {
+  return Array.from(activeFilters, ([column, value]) => ({ column, value }));
+}
+
 function buildSortButton(col: ColumnInfo, onSortChange: () => void): HTMLButtonElement {
   const btn = makeIconButton(SORT_ICON_SVG, "Sort");
   btn.classList.add("col-header-btn", "col-header-sort-btn");
@@ -46,7 +55,6 @@ function buildSortButton(col: ColumnInfo, onSortChange: () => void): HTMLButtonE
     } else {
       activeSort = undefined;
     }
-    postSort(activeSort ? activeSort.column : null, activeSort ? activeSort.ascending : true);
     onSortChange();
   });
   return btn;
@@ -66,7 +74,6 @@ function buildFilterToggleButton(col: ColumnInfo, onFilterChange: () => void): H
         activeFilters.set(col.name, value);
       }
       btn.classList.toggle("col-header-btn-active", value.trim() !== "");
-      postFilter(Array.from(activeFilters, ([c, v]) => ({ column: c, value: v })));
       onFilterChange();
     });
   });

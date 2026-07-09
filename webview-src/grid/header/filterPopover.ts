@@ -1,5 +1,5 @@
-import { makeIconButton } from "./utils";
-import CLEAR_ICON_SVG from "../media/icons/clear.svg";
+import { makeIconButton } from "../../utils";
+import CLEAR_ICON_SVG from "../../../media/icons/clear.svg";
 
 let popover: HTMLDivElement | undefined;
 let input: HTMLInputElement;
