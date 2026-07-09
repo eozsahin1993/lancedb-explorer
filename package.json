@@ -6,6 +6,7 @@
   "publisher": "local",
   "private": true,
   "license": "Apache-2.0",
+  "icon": "media/lance-db-explorer-logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/eozsahin1993/lancedb-explorer.git"
