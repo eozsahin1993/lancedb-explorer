@@ -89,11 +89,17 @@ export function toggleFilterPopover(
   onChangeCallback = onChange;
   input.value = initialValue;
 
-  const rect = anchor.getBoundingClientRect();
-  popover!.style.left = "";
-  popover!.style.right = `${window.innerWidth - rect.right}px`;
-  popover!.style.top = `${rect.bottom + 4}px`;
+  popover!.style.right = "";
   popover!.classList.remove("hidden");
+
+  const rect = anchor.getBoundingClientRect();
+  const popoverWidth = popover!.offsetWidth;
+  const margin = 8;
+  const maxLeft = Math.max(margin, window.innerWidth - popoverWidth - margin);
+  const left = Math.min(Math.max(rect.left, margin), maxLeft);
+
+  popover!.style.left = `${left}px`;
+  popover!.style.top = `${rect.bottom + 4}px`;
   input.focus();
 }
 

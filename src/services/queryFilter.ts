@@ -35,7 +35,7 @@ function buildFilterPredicate(col: ColumnInfo, rawValue: string): string | undef
     const num = Number(value);
     return Number.isNaN(num) ? undefined : `${identifier} = ${num}`;
   }
-  return `${identifier} LIKE '%${escapeSqlString(value)}%'`;
+  return `${identifier} ILIKE '%${escapeSqlString(value)}%'`;
 }
 
 export function buildWhereClause(filters: FilterSpec[] | undefined, schema: ColumnInfo[]): string | undefined {

@@ -58,7 +58,8 @@ function buildFilterToggleButton(col: ColumnInfo, onFilterChange: () => void): H
   btn.classList.toggle("col-header-btn-active", activeFilters.has(col.name));
   btn.addEventListener("click", (event) => {
     event.stopPropagation();
-    toggleFilterPopover(btn, col.name, activeFilters.get(col.name) ?? "", (value) => {
+    const anchor = (btn.closest(".tabulator-col") as HTMLElement | null) ?? btn;
+    toggleFilterPopover(anchor, col.name, activeFilters.get(col.name) ?? "", (value) => {
       if (value.trim() === "") {
         activeFilters.delete(col.name);
       } else {
