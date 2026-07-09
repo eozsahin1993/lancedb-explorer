@@ -31,9 +31,14 @@ function ensurePopover(): void {
   const clearBtn = makeIconButton(CLEAR_ICON_SVG, "Clear filter");
   clearBtn.className = "filter-popover-clear-btn";
   clearBtn.addEventListener("click", () => {
+    const wasEmpty = input.value.trim() === "";
     input.value = "";
     commit("");
-    input.focus();
+    if (wasEmpty) {
+      closeFilterPopover();
+    } else {
+      input.focus();
+    }
   });
   popover.appendChild(clearBtn);
 
