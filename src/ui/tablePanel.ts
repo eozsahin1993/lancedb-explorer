@@ -26,10 +26,10 @@ export function openTablePanel(context: vscode.ExtensionContext, dbPath: string,
   // every request.
   panel.webview.onDidReceiveMessage(async (message) => {
     if (message.type === "requestPage") {
-      const { requestId, page, size, sort, filters } = message;
+      const { requestId, page, size, sort, filters, pinnedRowIds } = message;
       try {
         const offset = (page - 1) * size;
-        const result = await getTablePage(dbPath, tableName, offset, size, sort, filters);
+        const result = await getTablePage(dbPath, tableName, offset, size, sort, filters, pinnedRowIds);
         panel.webview.postMessage({ type: "pageResult", requestId, ok: true, ...result });
       } catch (err) {
         panel.webview.postMessage({ type: "pageResult", requestId, ok: false, message: (err as Error).message });

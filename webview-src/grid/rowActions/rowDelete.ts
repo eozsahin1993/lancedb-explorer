@@ -1,6 +1,7 @@
 import type { CellComponent } from "tabulator-tables";
 import { table } from "../tableInstance";
 import { rowIdOf } from "../columns/cellActions";
+import { unpinRow } from "./pinnedRows";
 import { postDelete } from "../../vscodeApi";
 import { setStatus } from "../../status";
 
@@ -50,6 +51,7 @@ export function handleDeleteClick(cell: CellComponent): void {
   showAlert(
     buildDeleteConfirmEl(() => {
       setStatus("Deleting…");
+      unpinRow(rowId);
       postDelete(rowId);
     }),
   );

@@ -16,11 +16,17 @@ const pendingPageRequests = new Map<number, { resolve: (result: TablePage) => vo
 
 // Correlates requests/responses by id since postMessage has no built-in
 // request/response concept.
-export function requestPage(page: number, size: number, sort: SortSpec | undefined, filters: FilterSpec[]): Promise<TablePage> {
+export function requestPage(
+  page: number,
+  size: number,
+  sort: SortSpec | undefined,
+  filters: FilterSpec[],
+  pinnedRowIds: string[],
+): Promise<TablePage> {
   const requestId = ++nextRequestId;
   return new Promise((resolve, reject) => {
     pendingPageRequests.set(requestId, { resolve, reject });
-    vscode.postMessage({ type: "requestPage", requestId, page, size, sort, filters });
+    vscode.postMessage({ type: "requestPage", requestId, page, size, sort, filters, pinnedRowIds });
   });
 }
 
@@ -42,8 +48,8 @@ export function onMessage(handler: (message: UpdateResultMessage | DeleteResultM
       }
       pendingPageRequests.delete(message.requestId);
       if (message.ok) {
-        const { columns, rows, rowCount, offset, limit } = message;
-        pending.resolve({ columns, rows, rowCount, offset, limit });
+        const { columns, rows, rowCount, offset, limit, pinnedRows } = message;
+        pending.resolve({ columns, rows, rowCount, offset, limit, pinnedRows });
       } else {
         pending.reject(new Error(message.message ?? "Failed to load page"));
       }

@@ -10,6 +10,7 @@ export interface TablePage {
   rowCount: number;
   offset: number;
   limit: number;
+  pinnedRows: Record<string, unknown>[];
 }
 
 export type CellValue = string | number | boolean | null | CellValue[];

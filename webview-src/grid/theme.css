@@ -406,9 +406,9 @@
   color: var(--vscode-descriptionForeground);
 }
 
-.row-delete-btn {
+.row-delete-btn,
+.row-pin-btn {
   position: absolute;
-  right: 2px;
   top: 50%;
   transform: translateY(-50%);
   display: inline-flex;
@@ -425,13 +425,38 @@
   cursor: pointer;
 }
 
-.tabulator-row .tabulator-cell:hover .row-delete-btn {
+.row-delete-btn {
+  right: 2px;
+}
+
+.row-pin-btn {
+  right: 22px;
+}
+
+.tabulator-row .tabulator-cell:hover .row-delete-btn,
+.tabulator-row .tabulator-cell:hover .row-pin-btn {
   opacity: 1;
 }
 
 .row-delete-btn:hover {
   background: var(--vscode-inputValidation-errorBackground, var(--vscode-list-hoverBackground));
   color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.row-pin-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+.row-pin-btn.row-pin-btn-active {
+  color: var(--vscode-focusBorder);
+}
+
+.tabulator .tabulator-header .tabulator-frozen-rows-holder {
+  display: block;
+  padding-top: 0;
+  background: var(--vscode-editor-background);
+  border-bottom: 2px solid var(--vscode-focusBorder);
 }
 
 .tabulator .tabulator-alert {

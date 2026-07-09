@@ -1,11 +1,13 @@
-import type { ColumnDefinition } from "tabulator-tables";
+import type { CellComponent, ColumnDefinition } from "tabulator-tables";
 import type { ColumnInfo } from "../../../src/lancedb/types";
 import { buildColumnHeaderEl, isColumnPinned } from "../header/columnHeader";
 import { handleDeleteClick } from "../rowActions/rowDelete";
-import { cellFormatter } from "./cellActions";
+import { isRowPinned, togglePinnedRow } from "../rowActions/pinnedRows";
+import { cellFormatter, rowIdOf } from "./cellActions";
 import { makeIconButton } from "../../utils";
 import { table, getScrollLeft, setScrollLeft } from "../tableInstance";
 import DELETE_ICON_SVG from "../../../media/icons/delete.svg";
+import PIN_ICON_SVG from "../../../media/icons/pin.svg";
 
 export const COLUMN_MAX_WIDTH = 320;
 
@@ -22,6 +24,11 @@ export function setCurrentOffset(offset: number): void {
   currentOffset = offset;
 }
 
+function handlePinToggleClick(cell: CellComponent): void {
+  togglePinnedRow(rowIdOf(cell));
+  table?.replaceData();
+}
+
 export const rowNumberColumn: ColumnDefinition = {
   title: "#",
   field: "__rowNumber",
@@ -30,22 +37,39 @@ export const rowNumberColumn: ColumnDefinition = {
   frozen: true,
   width: 70,
   formatter: (cell) => {
-    const position = cell.getRow().getPosition();
-    const rowNum = String(currentOffset + (typeof position === "number" ? position : 0));
-
     const wrapper = document.createElement("div");
     wrapper.className = "row-number-cell";
+    const isPinned = cell.getRow().isFrozen();
 
-    const numSpan = document.createElement("span");
-    numSpan.className = "row-number-text";
-    numSpan.textContent = rowNum;
-    wrapper.appendChild(numSpan);
+    // Pinned rows are shown as synthetic extra rows outside normal pagination
+    // (see pagination/dataSource.ts), so a page-relative position number
+    // isn't meaningful for them -- leave the cell blank instead.
+    if (!isPinned) {
+      const position = cell.getRow().getPosition();
+      const rowNum = String(currentOffset + (typeof position === "number" ? position : 0));
 
-    // Lazy-build-on-hover, same as cell actions -- avoids building a delete
-    // button for every row up front.
+      const numSpan = document.createElement("span");
+      numSpan.className = "row-number-text";
+      numSpan.textContent = rowNum;
+      wrapper.appendChild(numSpan);
+    }
+
+    // Lazy-build-on-hover, same as cell actions -- avoids building action
+    // buttons for every row up front.
     wrapper.addEventListener(
       "mouseenter",
       () => {
+        const rowId = rowIdOf(cell);
+
+        const pinBtn = makeIconButton(PIN_ICON_SVG, isPinned ? "Unpin row" : "Pin row");
+        pinBtn.classList.add("row-pin-btn");
+        pinBtn.classList.toggle("row-pin-btn-active", isRowPinned(rowId));
+        pinBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          handlePinToggleClick(cell);
+        });
+        wrapper.appendChild(pinBtn);
+
         const deleteBtn = makeIconButton(DELETE_ICON_SVG, "Delete row");
         deleteBtn.classList.add("row-delete-btn");
         deleteBtn.addEventListener("click", (event) => {

@@ -15,6 +15,29 @@ function mapSchema(schema: Awaited<ReturnType<lancedb.Table["schema"]>>): Column
   }));
 }
 
+function mapRow(record: Record<string, unknown>, schema: ColumnInfo[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const col of schema) {
+    out[col.name] = toDisplayValue(record[col.name]);
+  }
+  const rowId = record._rowid;
+  out.__rowid = typeof rowId === "bigint" ? rowId.toString() : String(rowId);
+  return out;
+}
+
+async function getRowsByIds(table: lancedb.Table, schema: ColumnInfo[], rowIds: string[]): Promise<Record<string, unknown>[]> {
+  if (rowIds.length === 0) {
+    return [];
+  }
+  const results = await table
+    .query()
+    .select(schema.map((c) => c.name))
+    .withRowId()
+    .where(`_rowid IN (${rowIds.join(", ")})`)
+    .toArray();
+  return results.map((row) => mapRow(row as Record<string, unknown>, schema));
+}
+
 export async function getSchema(dbPath: string, tableName: string): Promise<ColumnInfo[]> {
   const table = await getTable(dbPath, tableName);
   return mapSchema(await table.schema());
@@ -27,6 +50,7 @@ export async function getTablePage(
   limit: number,
   sort?: SortSpec,
   filters?: FilterSpec[],
+  pinnedRowIds?: string[],
 ): Promise<TablePage> {
   const table = await getTable(dbPath, tableName);
   const schema = mapSchema(await table.schema());
@@ -42,19 +66,10 @@ export async function getTablePage(
   }
 
   const results = await query.offset(offset).limit(limit).toArray();
+  const rows = results.map((row) => mapRow(row as Record<string, unknown>, schema));
+  const pinnedRows = await getRowsByIds(table, schema, pinnedRowIds ?? []);
 
-  const rows = results.map((row) => {
-    const record = row as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    for (const col of schema) {
-      out[col.name] = toDisplayValue(record[col.name]);
-    }
-    const rowId = record._rowid;
-    out.__rowid = typeof rowId === "bigint" ? rowId.toString() : String(rowId);
-    return out;
-  });
-
-  return { columns: schema, rows, rowCount, offset, limit };
+  return { columns: schema, rows, rowCount, offset, limit, pinnedRows };
 }
 
 export async function updateCellValue(
