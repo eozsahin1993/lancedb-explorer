@@ -6,6 +6,10 @@
   "publisher": "local",
   "private": true,
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eozsahin1993/lancedb-explorer.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

@@ -1,0 +1,20 @@
+# Ignore everything by default; only re-included paths below ship in the .vsix.
+# Note: vsce auto-expands any bare "!dirname" negate line into an additional
+# "!dirname/**", so a bare "!node_modules" would silently re-include all of
+# node_modules (openai/onnxruntime/etc). Only use "/**"-suffixed negate lines.
+**
+
+!dist/**
+!media/**
+!package.json
+!README.md
+!LICENSE
+
+# @lancedb/lancedb is external to the esbuild bundle (native bindings can't be
+# bundled), so its JS glue and platform-specific binary package must ship as
+# real node_modules. apache-arrow is required internally by lancedb at runtime.
+# Everything else under node_modules (including lancedb's unused optional
+# embedding integrations - openai, huggingface transformers, onnxruntime) stays
+# excluded by the blanket "**" above.
+!node_modules/@lancedb/**
+!node_modules/apache-arrow/**

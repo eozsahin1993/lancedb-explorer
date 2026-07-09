@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            os: darwin
+            cpu: arm64
+            libc: glibc
+          - target: linux-x64
+            os: linux
+            cpu: x64
+            libc: glibc
+          - target: linux-arm64
+            os: linux
+            cpu: arm64
+            libc: glibc
+          - target: alpine-x64
+            os: linux
+            cpu: x64
+            libc: musl
+          - target: alpine-arm64
+            os: linux
+            cpu: arm64
+            libc: musl
+          - target: win32-x64
+            os: win32
+            cpu: x64
+            libc: glibc
+          - target: win32-arm64
+            os: win32
+            cpu: arm64
+            libc: glibc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Build with the toolchain native to this runner (esbuild/typescript are
+      # devDependencies and never ship in the .vsix, so their platform doesn't matter).
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
+      # Reinstall production deps only, overriding os/cpu/libc so npm resolves
+      # the @lancedb/lancedb-* native binary package for the release target,
+      # regardless of this runner's actual platform.
+      - name: Install target-specific runtime dependencies
+        run: npm ci --omit=dev --os=${{ matrix.os }} --cpu=${{ matrix.cpu }} --libc=${{ matrix.libc }}
+
+      - name: Package extension
+        run: npx vsce package --target ${{ matrix.target }} --out lancedb-explorer-${{ github.ref_name }}-${{ matrix.target }}.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.target }}
+          path: "*.vsix"
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.vsix
+          generate_release_notes: true
