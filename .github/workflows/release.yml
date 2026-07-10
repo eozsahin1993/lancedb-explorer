@@ -55,14 +55,31 @@ jobs:
           npm ci
           npm run build
 
+      # vsce package always reruns `npm run build` internally, which needs
+      # esbuild. Back it up before the prod-only reinstall below strips it.
+      - name: Back up esbuild
+        run: |
+          cp -R node_modules/esbuild /tmp/esbuild-backup
+          cp -R node_modules/@esbuild /tmp/esbuild-scoped-backup
+
       # Reinstall production deps only, overriding os/cpu/libc so npm resolves
       # the @lancedb/lancedb-* native binary package for the release target,
       # regardless of this runner's actual platform.
       - name: Install target-specific runtime dependencies
         run: npm ci --omit=dev --os=${{ matrix.os }} --cpu=${{ matrix.cpu }} --libc=${{ matrix.libc }}
 
+      # Restore via plain file copy, not `npm install` -- npm install
+      # unconditionally re-resolves optionalDependencies for the *runner's*
+      # actual platform (always linux-x64 here, regardless of matrix.target),
+      # which would silently re-add this runner's own @lancedb/lancedb-*
+      # binary alongside the target one just pruned in above, bloating every
+      # non-linux-x64 package with an extra ~150MB native binary it doesn't
+      # need. A file copy touches nothing else in node_modules.
       - name: Restore esbuild for this runner
-        run: npm install esbuild --no-save
+        run: |
+          rm -rf node_modules/esbuild node_modules/@esbuild
+          cp -R /tmp/esbuild-backup node_modules/esbuild
+          cp -R /tmp/esbuild-scoped-backup node_modules/@esbuild
 
       - name: Package extension
         run: npx vsce package --target ${{ matrix.target }} --out lancedb-explorer-${{ github.ref_name }}-${{ matrix.target }}.vsix
@@ -101,6 +118,9 @@ jobs:
         with:
           node-version: 20
 
+      # vsce (a devDependency) is needed to run the publish command itself;
+      # the actual per-target packages below are the pre-built .vsix files,
+      # not a fresh package built by this step.
       - name: Install dependencies
         run: npm ci
 
@@ -109,6 +129,12 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # OIDC federated login via the vscode-publisher user-assigned managed
+      # identity -- no stored client secret. Its federated credential is
+      # scoped to this job's "environment:" value above, and it's added as a
+      # Contributor member of the Marketplace publisher by resource ID (not
+      # the client ID) -- a plain Entra ID app registration/service
+      # principal doesn't work here, only a managed identity is recognized.
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
