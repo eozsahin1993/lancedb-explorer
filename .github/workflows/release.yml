@@ -131,10 +131,16 @@ jobs:
 
       # OIDC federated login via the vscode-publisher user-assigned managed
       # identity -- no stored client secret. Its federated credential is
-      # scoped to this job's "environment:" value above, and it's added as a
-      # Contributor member of the Marketplace publisher by resource ID (not
-      # the client ID) -- a plain Entra ID app registration/service
-      # principal doesn't work here, only a managed identity is recognized.
+      # scoped to this job's "environment:" value above. A plain Entra ID
+      # app registration/service principal doesn't work here, only a managed
+      # identity is recognized by the Marketplace -- and even then, neither
+      # its ARM resource ID nor its Entra Object ID is what the publisher's
+      # member-search wants. It needs the identity's Azure DevOps profile ID
+      # instead, obtained by calling, once, while authenticated as it:
+      #   az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+      #     --resource 499b84ac-1321-427f-aa17-267ca6975798
+      # (the "id" field of the response), then adding that ID as a
+      # Contributor member of the publisher on marketplace.visualstudio.com.
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
