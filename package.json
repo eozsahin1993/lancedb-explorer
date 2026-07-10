@@ -2,7 +2,7 @@
   "name": "lancedb-explorer",
   "displayName": "LanceDB Explorer",
   "description": "Browse LanceDB databases and tables from within VS Code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "EmreOzsahin",
   "license": "Apache-2.0",
   "icon": "media/lance-db-explorer-logo.png",

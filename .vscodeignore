@@ -21,8 +21,20 @@
 # @lancedb/lancedb is external to the esbuild bundle (native bindings can't be
 # bundled), so its JS glue and platform-specific binary package must ship as
 # real node_modules. apache-arrow is required internally by lancedb at runtime.
-# Everything else under node_modules (including lancedb's unused optional
-# embedding integrations - openai, huggingface transformers, onnxruntime) stays
-# excluded by the blanket "**" above.
+# tslib and flatbuffers are apache-arrow's own runtime deps (required by its
+# IPC/flatbuffer message parsing, not just its unused bin/arrow2csv CLI).
+# reflect-metadata is required unconditionally by @lancedb/lancedb's index.js
+# (it eagerly imports its embedding-function registry even though we never
+# use it). Missing any of these doesn't fail the build -- esbuild only
+# bundles code actually reachable from our own imports, so it silently
+# succeeds, and the extension fails to activate at all once installed,
+# since these are real requires inside lancedb/apache-arrow's own already-
+# bundled JS. Everything else under node_modules (including lancedb's
+# unused optional embedding integrations - openai, huggingface transformers,
+# onnxruntime, and apache-arrow's own unused CLI deps - command-line-args,
+# command-line-usage, json-bignum) stays excluded by the blanket "**" above.
 !node_modules/@lancedb/**
 !node_modules/apache-arrow/**
+!node_modules/tslib/**
+!node_modules/flatbuffers/**
+!node_modules/reflect-metadata/**
